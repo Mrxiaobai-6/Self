@@ -880,31 +880,98 @@
             });
         }
 
-        // 表单提交处理
-        function handleSubmit(e) {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const name = document.getElementById('name').value;
-            
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> 发送中...';
-            btn.disabled = true;
-            
-            setTimeout(() => {
-                btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> 发送成功！';
-                btn.classList.remove('from-indigo-600', 'to-purple-600');
-                btn.classList.add('from-green-600', 'to-emerald-600');
-                
-                setTimeout(() => {
-                    btn.innerHTML = '<span>发送消息</span><i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>';
-                    btn.classList.add('from-indigo-600', 'to-purple-600');
-                    btn.classList.remove('from-green-600', 'to-emerald-600');
-                    btn.disabled = false;
-                    document.getElementById('contactForm').reset();
-                    lucide.createIcons();
-                    alert(`感谢 ${name} 的留言！我会尽快通过邮件回复您。`);
-                }, 2000);
-            }, 1500);
+// ==========================================
+// Railway 后端 API 地址（已配置好）
+// ==========================================
+const API_URL = 'https://web-production-bcdb1.up.railway.app/api/contact';
+
+// 表单提交处理（连接真实后端）
+function handleSubmit(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('submitBtn');
+    const originalContent = btn.innerHTML;
+    
+    // 获取表单数据
+    const data = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        projectType: document.getElementById('projectType').value,
+        message: document.getElementById('message').value.trim()
+    };
+    
+    // 简单验证
+    if (!data.name || !data.email || !data.message) {
+        alert('请填写所有必填项');
+        return;
+    }
+    if (!data.email.includes('@')) {
+        alert('请输入正确的邮箱格式');
+        return;
+    }
+    
+    // 显示加载状态
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> 发送中...';
+    lucide.createIcons();
+    
+    // 发送到 Railway 后端
+    fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || '发送失败，请重试');
+            });
         }
+        return response.json();
+    })
+    .then(result => {
+        // 发送成功
+        btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> 发送成功！';
+        btn.classList.remove('from-indigo-600', 'to-purple-600');
+        btn.classList.add('from-green-600', 'to-emerald-600');
+        
+        // 显示成功提示
+        const toast = document.getElementById('toast');
+        toast.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i><span>消息已发送！我会尽快回复您</span>';
+        toast.classList.add('show');
+        
+        // 清空表单
+        document.getElementById('contactForm').reset();
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            btn.innerHTML = originalContent;
+            btn.classList.add('from-indigo-600', 'to-purple-600');
+            btn.classList.remove('from-green-600', 'to-emerald-600');
+            btn.disabled = false;
+            lucide.createIcons();
+        }, 3000);
+    })
+    .catch(error => {
+        // 发送失败
+        console.error('Error:', error);
+        btn.innerHTML = '<i data-lucide="x" class="w-5 h-5"></i> 发送失败';
+        btn.classList.remove('from-indigo-600', 'to-purple-600');
+        btn.classList.add('from-red-600', 'to-pink-600');
+        
+        alert('发送失败：' + error.message + '\n请直接添加微信：zbc200731');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.add('from-indigo-600', 'to-purple-600');
+            btn.classList.remove('from-red-600', 'to-pink-600');
+            btn.disabled = false;
+            lucide.createIcons();
+        }, 3000);
+    });
+}
 
         // 复制到剪贴板
         function copyToClipboard(text) {
